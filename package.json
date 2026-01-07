@@ -1,0 +1,9 @@
+{
+    "name": "vantage-pos-monorepo",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "build:frontend": "cd frontend && npm install && npm run build",
+        "install:backend": "cd backend && npm install"
+    }
+}
