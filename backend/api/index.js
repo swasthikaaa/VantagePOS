@@ -34,21 +34,28 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/pos', posRoutes);
-app.use('/api/warehouses', warehouseRoutes);
-app.use('/api/purchases', purchaseRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/quotations', quotationRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/units', unitRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/roles', roleRoutes);
-app.use('/api/offers', offerRoutes);
-app.use('/api/adjustments', adjustmentRoutes);
-app.use('/api/zbills', zBillRoutes);
+// Create API Router
+const apiRouter = express.Router();
+
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/products', productRoutes);
+apiRouter.use('/pos', posRoutes);
+apiRouter.use('/warehouses', warehouseRoutes);
+apiRouter.use('/purchases', purchaseRoutes);
+apiRouter.use('/expenses', expenseRoutes);
+apiRouter.use('/quotations', quotationRoutes);
+apiRouter.use('/notifications', notificationRoutes);
+apiRouter.use('/settings', settingsRoutes);
+apiRouter.use('/units', unitRoutes);
+apiRouter.use('/categories', categoryRoutes);
+apiRouter.use('/roles', roleRoutes);
+apiRouter.use('/offers', offerRoutes);
+apiRouter.use('/adjustments', adjustmentRoutes);
+apiRouter.use('/zbills', zBillRoutes);
+
+// Mount Router
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
