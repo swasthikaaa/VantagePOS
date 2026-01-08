@@ -24,9 +24,8 @@ const zBillRoutes = require('../routes/zBill');
 
 const app = express();
 
-// Middleware (CORS must be first)
 const corsOptions = {
-    origin: ["https://vantage-pos-nine.vercel.app", "http://localhost:5173"],
+    origin: true, // Reflects the request origin, allowing credentials to work
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'device-remember-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
