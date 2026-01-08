@@ -74,7 +74,8 @@ const connectDB = async () => {
         console.log('MongoDB Connected...');
     } catch (err) {
         console.error('Database connection error:', err.message);
-        process.exit(1);
+        // Do not exit process in serverless environment, better to return 500 on request
+        // process.exit(1); 
     }
 };
 
