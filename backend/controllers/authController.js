@@ -4,11 +4,78 @@ const { z } = require('zod');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 
+// Validation schema
 const loginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
 });
 
+const registerSchema = z.object({
+    name: z.string().min(2),
+    email: z.string().email(),
+    password: z.string().min(6),
+});
+
+// Helper to generate JWT
+const generateToken = (user) => {
+    return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+        expiresIn: '1d',
+    });
+};
+
+// ---------------- Public Registration ----------------
+exports.register = async (req, res) => {
+    try {
+        const validatedData = registerSchema.parse(req.body);
+        const { name, email, password } = validatedData;
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'User already exists' });
+        }
+
+        const user = await User.create({ name, email, password, role: 'user' });
+
+        const token = generateToken(user);
+
+        res.status(201).json({
+            success: true,
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            },
+        });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// ---------------- Staff/Admin Registration ----------------
+exports.registerStaff = async (req, res) => {
+    try {
+        const { name, email, password, role } = req.body;
+
+        if (!name || !email || !password || !role) {
+            return res.status(400).json({ success: false, message: 'All fields are required' });
+        }
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'User already exists' });
+        }
+
+        const user = await User.create({ name, email, password, role });
+
+        res.status(201).json({ success: true, user });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// ---------------- Login ----------------
 exports.login = async (req, res) => {
     try {
         const validatedData = loginSchema.parse(req.body);
@@ -23,9 +90,7 @@ exports.login = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Account is deactivated' });
         }
 
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-            expiresIn: '1d',
-        });
+        const token = generateToken(user);
 
         user.lastLogin = Date.now();
         await user.save();
@@ -45,6 +110,7 @@ exports.login = async (req, res) => {
     }
 };
 
+// ---------------- Get Current User ----------------
 exports.getMe = async (req, res) => {
     res.status(200).json({
         success: true,
@@ -52,17 +118,7 @@ exports.getMe = async (req, res) => {
     });
 };
 
-// Admin only registration for staff
-exports.registerStaff = async (req, res) => {
-    try {
-        const { name, email, password, role } = req.body;
-        const user = await User.create({ name, email, password, role });
-        res.status(201).json({ success: true, user });
-    } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
-    }
-};
-
+// ---------------- Get All Users ----------------
 exports.getUsers = async (req, res) => {
     try {
         const users = await User.find({}).sort('-createdAt');
@@ -72,6 +128,7 @@ exports.getUsers = async (req, res) => {
     }
 };
 
+// ---------------- Update User ----------------
 exports.updateUser = async (req, res) => {
     try {
         const { name, email, role, isActive } = req.body;
@@ -80,38 +137,33 @@ exports.updateUser = async (req, res) => {
             { name, email, role, isActive },
             { new: true, runValidators: true }
         );
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         res.status(200).json({ success: true, user });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
 };
 
+// ---------------- Delete User ----------------
 exports.deleteUser = async (req, res) => {
     try {
         const user = await User.findByIdAndDelete(req.params.id);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         res.status(200).json({ success: true, message: 'User deleted' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
 };
 
+// ---------------- Forgot Password ----------------
 exports.forgotPassword = async (req, res) => {
     try {
         const user = await User.findOne({ email: req.body.email });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         const resetToken = crypto.randomBytes(20).toString('hex');
         user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
         user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
-
         await user.save();
 
         const resetUrl = `${req.get('origin')}/reset-password/${resetToken}`;
@@ -144,6 +196,7 @@ exports.forgotPassword = async (req, res) => {
     }
 };
 
+// ---------------- Reset Password ----------------
 exports.resetPassword = async (req, res) => {
     try {
         const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
@@ -152,9 +205,7 @@ exports.resetPassword = async (req, res) => {
             resetPasswordExpire: { $gt: Date.now() }
         });
 
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid or expired token' });
-        }
+        if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired token' });
 
         user.password = req.body.password;
         user.resetPasswordToken = undefined;

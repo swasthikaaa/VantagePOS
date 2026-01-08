@@ -1,36 +1,32 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const express = require('express');
+const router = express.Router();
+const {
+    register,
+    registerStaff,
+    login,
+    getMe,
+    getUsers,
+    updateUser,
+    deleteUser,
+    forgotPassword,
+    resetPassword
+} = require('../controllers/authController');
 
-exports.protect = async (req, res, next) => {
-    let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        token = req.headers.authorization.split(' ')[1];
-    }
+const { protect, authorize } = require('../middleware/auth');
 
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
-    }
+// ---------------- Public Routes ----------------
+router.post('/register', register); // normal user registration
+router.post('/login', login);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password/:token', resetPassword);
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded.id);
-        if (!req.user || !req.user.isActive) {
-            return res.status(401).json({ success: false, message: 'User not found or inactive' });
-        }
-        next();
-    } catch (err) {
-        return res.status(401).json({ success: false, message: 'Invalid token' });
-    }
-};
+// ---------------- Protected Routes ----------------
+router.get('/me', protect, getMe);
 
-exports.authorize = (...roles) => {
-    return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
-            return res.status(403).json({
-                success: false,
-                message: `User role ${req.user.role} is not authorized to access this route`
-            });
-        }
-        next();
-    };
-};
+// ---------------- Admin Routes ----------------
+router.post('/register-staff', protect, authorize('admin'), registerStaff);
+router.get('/', protect, authorize('admin'), getUsers);
+router.put('/:id', protect, authorize('admin'), updateUser);
+router.delete('/:id', protect, authorize('admin'), deleteUser);
+
+module.exports = router;
