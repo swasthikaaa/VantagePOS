@@ -24,8 +24,26 @@ const zBillRoutes = require('../routes/zBill');
 
 const app = express();
 
+const allowedOrigins = [
+    'https://vantage-pos-nine.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+];
+
 const corsOptions = {
-    origin: '*', // Allow all origins for debugging
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            // For debugging, you might want to log this blocked origin
+            console.log('Blocked by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'device-remember-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
 };
