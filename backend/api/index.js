@@ -1,11 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
-// Import routes
+// Routes
 const authRoutes = require('../routes/auth');
 const productRoutes = require('../routes/products');
 const posRoutes = require('../routes/pos');
@@ -24,37 +23,12 @@ const zBillRoutes = require('../routes/zBill');
 
 const app = express();
 
-/* ===============================
-   CORS CONFIG (FIXED)
-================================ */
-const corsOptions = {
-    origin: [
-        'https://vantage-pos-nine.vercel.app',
-        'https://vantage-pos-swasthikaaas-projects.vercel.app',
-        'http://localhost:5173',
-        'http://localhost:3000'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-};
-
-app.use(cors(corsOptions));
-
-/* ===============================
-   MIDDLEWARE
-================================ */
+/* Middleware */
 app.use(express.json());
-app.use(
-    helmet({
-        crossOriginResourcePolicy: false,
-    })
-);
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan('dev'));
 
-/* ===============================
-   API ROUTES
-================================ */
+/* Routes */
 const apiRouter = express.Router();
 
 apiRouter.use('/auth', authRoutes);
@@ -73,42 +47,25 @@ apiRouter.use('/offers', offerRoutes);
 apiRouter.use('/adjustments', adjustmentRoutes);
 apiRouter.use('/zbills', zBillRoutes);
 
-// ✅ Mount ONLY under /api (IMPORTANT)
 app.use('/api', apiRouter);
 
-/* ===============================
-   HEALTH CHECK
-================================ */
+/* Health */
 app.get('/api/health', (req, res) => {
-    res.status(200).json({
-        status: 'OK',
-        uptime: process.uptime(),
-    });
+    res.json({ status: 'OK' });
 });
 
-/* ===============================
-   DATABASE CONNECTION
-================================ */
-const connectDB = async () => {
-    try {
-        await mongoose.connect(
-            process.env.MONGODB_URI || process.env.MONGO_URI
-        );
-        console.log('MongoDB Connected');
-    } catch (err) {
-        console.error('MongoDB connection error:', err.message);
-    }
-};
+/* MongoDB (serverless safe) */
+let cached = global.mongoose;
+if (!cached) cached = global.mongoose = { conn: null, promise: null };
 
+async function connectDB() {
+    if (cached.conn) return cached.conn;
+    if (!cached.promise) {
+        cached.promise = mongoose.connect(process.env.MONGODB_URI);
+    }
+    cached.conn = await cached.promise;
+    return cached.conn;
+}
 connectDB();
 
-/* ===============================
-   SERVER START
-================================ */
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
-module.exports = app; // Required for Vercel
+module.exports = app;

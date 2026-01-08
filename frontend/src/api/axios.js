@@ -1,13 +1,8 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
-const API_BASE_URL =
-    import.meta.env.VITE_API_URL ||
-    'https://vantage-pos-swasthikaaas-projects.vercel.app/api';
-
 const api = axios.create({
-    baseURL: API_BASE_URL,
-    withCredentials: true, // safe for auth / cookies
+    baseURL: '/api', // SAME ORIGIN
 });
 
 api.interceptors.request.use((config) => {
@@ -17,16 +12,5 @@ api.interceptors.request.use((config) => {
     }
     return config;
 });
-
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            useAuthStore.getState().logout();
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);
 
 export default api;
