@@ -1,8 +1,13 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
+const API_BASE_URL =
+    import.meta.env.VITE_API_URL ||
+    'https://vantage-pos-swasthikaaas-projects.vercel.app/api';
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || '/api',
+    baseURL: API_BASE_URL,
+    withCredentials: true, // safe for auth / cookies
 });
 
 api.interceptors.request.use((config) => {

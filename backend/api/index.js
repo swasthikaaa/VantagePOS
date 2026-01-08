@@ -24,41 +24,37 @@ const zBillRoutes = require('../routes/zBill');
 
 const app = express();
 
-const allowedOrigins = [
-    'https://vantage-pos-nine.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-];
-
+/* ===============================
+   CORS CONFIG (FIXED)
+================================ */
 const corsOptions = {
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            // For debugging, you might want to log this blocked origin
-            console.log('Blocked by CORS:', origin);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: [
+        'https://vantage-pos-nine.vercel.app',
+        'https://vantage-pos-swasthikaaas-projects.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'device-remember-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
+/* ===============================
+   MIDDLEWARE
+================================ */
 app.use(express.json());
-app.use(helmet({
-    crossOriginResourcePolicy: false,
-}));
+app.use(
+    helmet({
+        crossOriginResourcePolicy: false,
+    })
+);
 app.use(morgan('dev'));
 
-// Routes
-// Create API Router
+/* ===============================
+   API ROUTES
+================================ */
 const apiRouter = express.Router();
 
 apiRouter.use('/auth', authRoutes);
@@ -77,30 +73,42 @@ apiRouter.use('/offers', offerRoutes);
 apiRouter.use('/adjustments', adjustmentRoutes);
 apiRouter.use('/zbills', zBillRoutes);
 
-// Mount Router
+// ✅ Mount ONLY under /api (IMPORTANT)
 app.use('/api', apiRouter);
-app.use('/', apiRouter);
 
-// Health check
+/* ===============================
+   HEALTH CHECK
+================================ */
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'OK', uptime: process.uptime() });
+    res.status(200).json({
+        status: 'OK',
+        uptime: process.uptime(),
+    });
 });
 
-// Database connection
+/* ===============================
+   DATABASE CONNECTION
+================================ */
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
-        console.log('MongoDB Connected...');
+        await mongoose.connect(
+            process.env.MONGODB_URI || process.env.MONGO_URI
+        );
+        console.log('MongoDB Connected');
     } catch (err) {
-        console.error('Database connection error:', err.message);
-        // Do not exit process in serverless environment, better to return 500 on request
-        // process.exit(1); 
+        console.error('MongoDB connection error:', err.message);
     }
 };
 
 connectDB();
 
+/* ===============================
+   SERVER START
+================================ */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-module.exports = app; // For Vercel
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
+module.exports = app; // Required for Vercel
