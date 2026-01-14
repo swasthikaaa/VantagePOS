@@ -25,9 +25,14 @@ exports.getLowStockProducts = async (req, res) => {
             $expr: { $lte: ["$totalStock", "$alertQuantity"] }
         }).populate('category', 'name').populate('unit', 'shortName');
 
+        if (!products) {
+            return res.status(200).json({ success: true, count: 0, data: [] });
+        }
+
         res.status(200).json({ success: true, count: products.length, data: products });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Low stock error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch low stock products' });
     }
 };
 

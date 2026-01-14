@@ -1,32 +1,40 @@
-const express = require('express');
-const router = express.Router();
-const {
-    register,
-    registerStaff,
-    login,
-    getMe,
-    getUsers,
-    updateUser,
-    deleteUser,
-    forgotPassword,
-    resetPassword
-} = require('../controllers/authController');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const { protect, authorize } = require('../middleware/auth');
+// Protect routes
+exports.protect = async (req, res, next) => {
+    let token;
 
-// ---------------- Public Routes ----------------
-router.post('/register', register); // normal user registration
-router.post('/login', login);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password/:token', resetPassword);
+    if (
+        req.headers.authorization &&
+        req.headers.authorization.startsWith('Bearer')
+    ) {
+        token = req.headers.authorization.split(' ')[1];
+    }
 
-// ---------------- Protected Routes ----------------
-router.get('/me', protect, getMe);
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
+    }
 
-// ---------------- Admin Routes ----------------
-router.post('/register-staff', protect, authorize('admin'), registerStaff);
-router.get('/', protect, authorize('admin'), getUsers);
-router.put('/:id', protect, authorize('admin'), updateUser);
-router.delete('/:id', protect, authorize('admin'), deleteUser);
+    try {
+        // Verify token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = await User.findById(decoded.id);
+        next();
+    } catch (err) {
+        return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
+    }
+};
 
-module.exports = router;
+// Grant access to specific roles
+exports.authorize = (...roles) => {
+    return (req, res, next) => {
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                message: `User role ${req.user.role} is not authorized to access this route`
+            });
+        }
+        next();
+    };
+};
