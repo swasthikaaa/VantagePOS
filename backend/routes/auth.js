@@ -1,3 +1,4 @@
+const express = require('express');
 const { register, login, getMe, registerStaff, getUsers, updateUser, deleteUser, forgotPassword, resetPassword } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 
