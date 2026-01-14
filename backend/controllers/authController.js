@@ -34,7 +34,10 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
-        const user = await User.create({ name, email, password, role: 'user' });
+        const userCount = await User.countDocuments();
+        const role = userCount === 0 ? 'Admin' : 'Cashier';
+
+        const user = await User.create({ name, email, password, role });
 
         const token = generateToken(user);
 

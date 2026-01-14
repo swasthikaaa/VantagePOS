@@ -7,24 +7,18 @@ const seedDB = async () => {
         await User.deleteMany({});
         await Product.deleteMany({});
 
-        const hashedPassword = await bcrypt.hash('password123', 10);
-
         const admin = new User({
             name: 'Admin User',
             email: 'admin@pos.com',
-            password: hashedPassword,
+            password: 'password123',
             role: 'Admin'
         });
-        // Skip pre-save by using a different method or just accepting it might re-hash (which is fine if we only do it once)
-        // Actually, save() will trigger pre-save. If password is already hashed, pre-save will hash it again.
-        // Let's modify User.js to check if password is already hashed (bcrypt hashes start with $2a$ or $2b$)
-
         await admin.save();
 
         const cashier = new User({
             name: 'Cashier Sarah',
             email: 'cashier@pos.com',
-            password: hashedPassword,
+            password: 'password123',
             role: 'Cashier'
         });
         await cashier.save();
