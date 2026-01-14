@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cors = require('cors');
 
 // Routes
 const authRoutes = require('../routes/auth');
@@ -24,6 +25,17 @@ const zBillRoutes = require('../routes/zBill');
 const app = express();
 
 /* Middleware */
+// CORS configuration
+const corsOptions = {
+    origin: process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL || '*'
+        : '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan('dev'));
